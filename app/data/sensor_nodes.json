@@ -1,0 +1,152 @@
+[
+  {
+    "sensor_id": "SN-RG-MND-01",
+    "ward_id": "W-HP-MND-01",
+    "sensor_type": "rain_gauge",
+    "name": "Pandoh Ridge Optical Rain Gauge",
+    "lat": 31.6745,
+    "lng": 77.0195,
+    "unit": "mm/h",
+    "default_value": 12.0
+  },
+  {
+    "sensor_id": "SN-SM-MND-01",
+    "ward_id": "W-HP-MND-01",
+    "sensor_type": "soil_moisture",
+    "name": "Pandoh Slope TDR Moisture Probe",
+    "lat": 31.6730,
+    "lng": 77.0210,
+    "unit": "% VWC",
+    "default_value": 24.5
+  },
+  {
+    "sensor_id": "SN-RG-MND-02",
+    "ward_id": "W-HP-MND-02",
+    "sensor_type": "rain_gauge",
+    "name": "Aut Tunnel Weather Station",
+    "lat": 31.7340,
+    "lng": 77.1250,
+    "unit": "mm/h",
+    "default_value": 18.5
+  },
+  {
+    "sensor_id": "SN-SM-MND-02",
+    "ward_id": "W-HP-MND-02",
+    "sensor_type": "soil_moisture",
+    "name": "Aut Slope MEMS Inclinometer & VWC",
+    "lat": 31.7325,
+    "lng": 77.1280,
+    "unit": "% VWC",
+    "default_value": 31.0
+  },
+  {
+    "sensor_id": "SN-RG-CHM-03",
+    "ward_id": "W-UK-CHM-03",
+    "sensor_type": "rain_gauge",
+    "name": "Joshimath Upper Ridge Rain Gauge",
+    "lat": 30.5540,
+    "lng": 79.5680,
+    "unit": "mm/h",
+    "default_value": 35.0
+  },
+  {
+    "sensor_id": "SN-SM-CHM-03",
+    "ward_id": "W-UK-CHM-03",
+    "sensor_type": "soil_moisture",
+    "name": "Joshimath Vibrating Wire Piezometer",
+    "lat": 30.5520,
+    "lng": 79.5700,
+    "unit": "% VWC",
+    "default_value": 38.2
+  },
+  {
+    "sensor_id": "SN-RG-CHM-04",
+    "ward_id": "W-UK-CHM-04",
+    "sensor_type": "rain_gauge",
+    "name": "Rishi Ganga Cloudburst Sensor",
+    "lat": 30.4850,
+    "lng": 79.6980,
+    "unit": "mm/h",
+    "default_value": 85.0
+  },
+  {
+    "sensor_id": "SN-SM-CHM-04",
+    "ward_id": "W-UK-CHM-04",
+    "sensor_type": "soil_moisture",
+    "name": "Raini Debris Flow Saturation Node",
+    "lat": 30.4830,
+    "lng": 79.7040,
+    "unit": "% VWC",
+    "default_value": 43.5
+  },
+  {
+    "sensor_id": "SN-RV-CHM-04",
+    "ward_id": "W-UK-CHM-04",
+    "sensor_type": "river_gauge",
+    "name": "Rishi Ganga Ultrasonic Water Level",
+    "lat": 30.4815,
+    "lng": 79.6930,
+    "unit": "m",
+    "default_value": 1983.5
+  },
+  {
+    "sensor_id": "SN-RG-WYN-05",
+    "ward_id": "W-KL-WYN-05",
+    "sensor_type": "rain_gauge",
+    "name": "Chooralmala Monsoonal Rain Gauge",
+    "lat": 11.5350,
+    "lng": 76.1280,
+    "unit": "mm/h",
+    "default_value": 28.0
+  },
+  {
+    "sensor_id": "SN-SM-WYN-05",
+    "ward_id": "W-KL-WYN-05",
+    "sensor_type": "soil_moisture",
+    "name": "Meppadi Hill Moisture Probe",
+    "lat": 11.5320,
+    "lng": 76.1310,
+    "unit": "% VWC",
+    "default_value": 36.8
+  },
+  {
+    "sensor_id": "SN-RG-RDR-06",
+    "ward_id": "W-UK-RDR-06",
+    "sensor_type": "rain_gauge",
+    "name": "Kedarnath Mandakini Precipitation Node",
+    "lat": 30.7350,
+    "lng": 79.0680,
+    "unit": "mm/h",
+    "default_value": 42.0
+  },
+  {
+    "sensor_id": "SN-RV-RDR-06",
+    "ward_id": "W-UK-RDR-06",
+    "sensor_type": "river_gauge",
+    "name": "Mandakini River Radar Water Gauge",
+    "lat": 30.7320,
+    "lng": 79.0650,
+    "unit": "m",
+    "default_value": 3578.2
+  },
+  {
+    "sensor_id": "SN-RG-KNG-07",
+    "ward_id": "W-HP-KNG-07",
+    "sensor_type": "rain_gauge",
+    "name": "Dharamkot Rain Telemetry Station",
+    "lat": 32.2410,
+    "lng": 76.3290,
+    "unit": "mm/h",
+    "default_value": 15.0
+  },
+  {
+    "sensor_id": "SN-SM-KNG-07",
+    "ward_id": "W-HP-KNG-07",
+    "sensor_type": "soil_moisture",
+    "name": "Bhagsu Slope Pore Pressure Node",
+    "lat": 32.2390,
+    "lng": 76.3330,
+    "unit": "% VWC",
+    "default_value": 26.0
+  }
+]

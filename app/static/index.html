@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NDRF Flash Flood & Landslide Early Warning System</title>
+    <meta name="description" content="Hyper-local early warning and tactical disaster response platform for flash floods and landslides in hilly regions.">
+    <meta name="theme-color" content="#ef4444">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Google Fonts: Outfit & Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN (version pinned; build to static CSS to drop this later) -->
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script src="/static/tailwind-config.js"></script>
+    
+    <!-- Leaflet GIS CSS & JS (pinned + Subresource Integrity) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+    
+    <!-- Chart.js (pinned + Subresource Integrity) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+            integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+    
+    <!-- Lucide Icons (pinned, no more @latest floating tag + Subresource Integrity) -->
+    <script src="https://unpkg.com/lucide@1.52.0/dist/umd/lucide.min.js"
+            integrity="sha384-SSRIJfpvnhji4rCcULgpNXRJjQ9P/odU9OaWxSumsZiokvJ7zAu4PGQVWyWxTG3u" crossorigin="anonymous"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030712;
+            color: #f1f5f9;
+        }
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Outfit', sans-serif;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Glassmorphism & Custom Glows */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.7);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.65);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(71, 85, 105, 0.4);
+        }
+        .glow-red {
+            box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.45);
+        }
+        .glow-amber {
+            box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.4);
+        }
+        .glow-emerald {
+            box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Leaflet Container */
+        #map {
+            height: 560px;
+            width: 100%;
+            border-radius: 1rem;
+            z-index: 1;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Pulse radar animation */
+        @keyframes radar-pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.4); opacity: 0.15; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .radar-beacon {
+            animation: radar-pulse 2s infinite ease-in-out;
+        }
+
+        /* Active Navigation Tab */
+        .tab-btn {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .tab-active {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        .tab-active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #ef4444, #f97316);
+            border-radius: 3px 3px 0 0;
+        }
+
+        /* Slope Canvas */
+        #slopeCanvas {
+            background: radial-gradient(circle at 50% 20%, #1e293b 0%, #090d16 100%);
+            border-radius: 0.75rem;
+            border: 1px solid #334155;
+            width: 100%;
+            height: 280px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-red-500 selection:text-white">
+
+    <!-- Top Mission Command Bar -->
+    <header class="glass-panel sticky top-0 z-50 border-b border-slate-800/80 px-4 lg:px-8 py-3.5 flex flex-wrap items-center justify-between shadow-2xl">
+        <div class="flex items-center space-x-3.5">
+            <div class="relative">
+                <div class="w-11 h-11 bg-gradient-to-br from-red-600 to-amber-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-950/60 ring-2 ring-red-500/30">
+                    <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                </div>
+                <span class="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+                </span>
+            </div>
+            <div>
+                <div class="flex items-center gap-2.5">
+                    <h1 class="text-lg lg:text-xl font-bold font-heading tracking-tight text-white flex items-center gap-2">
+                        NDRF Flash Flood & Landslide Prediction Platform
+                    </h1>
+                    <span class="hidden sm:inline-block text-[11px] bg-red-950/80 text-red-400 border border-red-800/80 px-2 py-0.5 rounded-full font-mono font-semibold tracking-wider">
+                        HYPER-LOCAL V3.3
+                    </span>
+                </div>
+                <p class="text-xs text-slate-400 flex items-center gap-2">
+                    <span>Disaster Management Division | National Disaster Response Force (Govt. of India)</span>
+                    <span class="text-slate-600">•</span>
+                    <span class="text-slate-400 font-mono" id="live-clocks">UTC: --:--:-- | IST: --:--:--</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Top Right Controls: Siren, Mode Switcher, Hazard Chip -->
+        <div class="flex items-center space-x-3 mt-3 lg:mt-0">
+            <!-- Siren Synthesizer Button -->
+            <button id="btn-siren" onclick="toggleEmergencySiren()" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" title="Trigger Web Audio Emergency Siren">
+                <i data-lucide="volume-2" class="w-4 h-4 text-red-400"></i>
+                <span id="siren-status-text">Test Siren</span>
+            </button>
+
+            <!-- Mode Switcher (NDRF Command vs Citizen Mobile Portal) -->
+            <div class="bg-slate-900/90 border border-slate-700 p-1 rounded-xl flex items-center space-x-1">
+                <button id="mode-btn-command" onclick="switchAppMode('command')" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-red-600 text-white shadow-sm flex items-center gap-1.5">
+                    <i data-lucide="command" class="w-3.5 h-3.5"></i> NDRF Command
+                </button>
+                <button id="mode-btn-citizen" onclick="switchAppMode('citizen')" class="px-3 py-1 rounded-lg text-xs font-medium transition text-slate-400 hover:text-white flex items-center gap-1.5">
+                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> Citizen Portal
+                </button>
+            </div>
+
+            <!-- Global Risk Alert Banner -->
+            <div class="hidden sm:flex items-center space-x-2.5 bg-red-950/40 border border-red-800/80 px-3.5 py-1.5 rounded-xl glow-red">
+                <div class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></div>
+                <div>
+                    <div class="text-[10px] text-red-300 font-bold uppercase tracking-wider">Active Hazard Peak</div>
+                    <div class="text-xs font-bold text-red-400 font-mono" id="highest-risk-ward">Loading telemetry...</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- APP MODE 1: NDRF COMMAND & OPERATIONS CONSOLE -->
+    <div id="app-mode-command" class="flex-1 flex flex-col">
+
+        <!-- Navigation Ribbon Tabs -->
+        <nav class="bg-slate-900/95 border-b border-slate-800/90 px-4 lg:px-8 flex space-x-6 text-xs lg:text-sm text-slate-400 overflow-x-auto shadow-inner">
+            <button onclick="switchTab('gis-map')" id="tab-gis-map" class="py-3 px-1 tab-btn tab-active flex items-center gap-2">
+                <i data-lucide="map" class="w-4 h-4"></i> GIS Topo Map & Zones
+            </button>
+            <button onclick="switchTab('telemetry')" id="tab-telemetry" class="py-3 px-1 tab-btn hover:text-white flex items-center gap-2">
+                <i data-lucide="activity" class="w-4 h-4"></i> Live Telemetry & Sensors
+            </button>
+            <button onclick="switchTab('slope-physics')" id="tab-slope-physics" class="py-3 px-1 tab-btn hover:text-white flex items-center gap-2">
+                <i data-lucide="mountain" class="w-4 h-4"></i> Geotechnical Physics Lab
+            </button>
+            <button onclick="switchTab('gemini-ai')" id="tab-gemini-ai" class="py-3 px-1 tab-btn hover:text-white flex items-center gap-2 text-indigo-400 font-semibold">
+                <i data-lucide="bot" class="w-4 h-4"></i> Gemini AI Tactical Copilot
+            </button>
+            <button onclick="switchTab('simulator')" id="tab-simulator" class="py-3 px-1 tab-btn hover:text-white flex items-center gap-2 text-amber-400">
+                <i data-lucide="flame" class="w-4 h-4"></i> Disaster Drill Simulator
+            </button>
+            <button onclick="switchTab('early-warnings')" id="tab-early-warnings" class="py-3 px-1 tab-btn hover:text-white flex items-center gap-2">
+                <i data-lucide="radio" class="w-4 h-4"></i> Lead-Time & Dispatch
+            </button>
+            <button onclick="switchTab('sos-radar')" id="tab-sos-radar" class="py-3 px-1 tab-btn hover:text-white flex items-center gap-2 text-red-400 font-semibold">
+                <i data-lucide="life-buoy" class="w-4 h-4"></i> SOS Distress Radar
+                <span id="sos-badge-count" class="bg-red-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">2</span>
+            </button>
+            <button onclick="switchTab('historical')" id="tab-historical" class="py-3 px-1 tab-btn hover:text-white flex items-center gap-2">
+                <i data-lucide="history" class="w-4 h-4"></i> Disaster Catalog
+            </button>
+        </nav>
+
+        <!-- Main Dynamic Workspace Body -->
+        <main class="flex-1 p-4 lg:p-8 space-y-6">
+
+            <!-- TAB 1: GIS Hazard Topography Map -->
+            <section id="view-gis-map" class="space-y-6">
+                <!-- Map Quick Filters Bar -->
+                <div class="glass-panel p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-slate-400 font-medium">Himalayan Hotspot Jumps:</span>
+                        <button onclick="jumpToLocation(30.485, 79.698, 12)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 font-mono">Chamoli (Raini)</button>
+                        <button onclick="jumpToLocation(30.735, 79.068, 12)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 font-mono">Kedarnath</button>
+                        <button onclick="jumpToLocation(31.674, 77.019, 12)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 font-mono">Mandi (Pandoh)</button>
+                        <button onclick="jumpToLocation(32.241, 76.329, 12)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 font-mono">McLeod Ganj</button>
+                        <button onclick="jumpToLocation(11.535, 76.128, 12)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 font-mono">Wayanad (Meppadi)</button>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <!-- Layer Switcher -->
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-slate-400">Layer:</span>
+                            <select id="map-tile-select" onchange="changeMapLayer(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs outline-none">
+                                <option value="osm">OpenStreetMap</option>
+                                <option value="topo" selected>Topographic / Terrain</option>
+                                <option value="satellite">ESRI Satellite Hybrid</option>
+                                <option value="dark">Dark Matter Tactical</option>
+                            </select>
+                        </div>
+
+                        <!-- Evacuation Route Overlay Checkbox -->
+                        <label class="flex items-center space-x-1.5 cursor-pointer text-slate-300">
+                            <input type="checkbox" id="chk-evac-routes" checked onchange="toggleEvacuationRoutes()" class="accent-red-500 rounded">
+                            <span>Show Evacuation Tracks</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <!-- Leaflet GIS Map Container -->
+                    <div class="lg:col-span-3 glass-panel p-4 rounded-2xl shadow-2xl flex flex-col space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-base font-semibold font-heading text-white flex items-center gap-2">
+                                <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+                                Hyper-Local Ward Hazard & IoT Sensor Topography Map
+                            </h2>
+                            <div class="flex space-x-2 text-[11px]">
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span> RED Alert</span>
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span> ORANGE Warning</span>
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span> YELLOW Watch</span>
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> GREEN Stable</span>
+                            </div>
+                        </div>
+                        <div id="map"></div>
+                    </div>
+
+                    <!-- Side Panel: Active Wards Breakdown -->
+                    <div class="glass-panel p-4 rounded-2xl shadow-2xl space-y-4 flex flex-col">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <h3 class="text-sm font-bold font-heading text-slate-200">Active Wards Monitored</h3>
+                            <span class="text-xs text-slate-400 font-mono" id="ward-count-badge">7 Wards</span>
+                        </div>
+
+                        <!-- Ward Search Bar -->
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400"></i>
+                            <input type="text" id="ward-search-input" onkeyup="filterWardList()" placeholder="Filter by village, district..." class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-red-500">
+                        </div>
+
+                        <div class="space-y-3 overflow-y-auto max-h-[440px] pr-1" id="ward-list">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: Live IoT Telemetry & Charts -->
+            <section id="view-telemetry" class="hidden space-y-6">
+                <!-- 4 Hero Metric Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-cyan-400 shadow-xl space-y-1">
+                        <div class="flex items-center justify-between text-xs text-slate-400">
+                            <span>Rainfall Intensity</span>
+                            <i data-lucide="cloud-rain" class="w-4 h-4 text-cyan-400"></i>
+                        </div>
+                        <div class="text-3xl font-extrabold font-mono text-cyan-400 tracking-tight" id="sensor-val-rain">85.0 mm/h</div>
+                        <div class="text-[11px] text-slate-400">Cloudburst Threshold: &gt; 100 mm/h</div>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-amber-400 shadow-xl space-y-1">
+                        <div class="flex items-center justify-between text-xs text-slate-400">
+                            <span>Soil Volumetric Moisture</span>
+                            <i data-lucide="droplet" class="w-4 h-4 text-amber-400"></i>
+                        </div>
+                        <div class="text-3xl font-extrabold font-mono text-amber-400 tracking-tight" id="sensor-val-sm">43.5% VWC</div>
+                        <div class="text-[11px] text-amber-300">96.6% Saturation Limit (Matric suction loss)</div>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-red-500 shadow-xl space-y-1">
+                        <div class="flex items-center justify-between text-xs text-slate-400">
+                            <span>Slope Factor of Safety (FoS)</span>
+                            <i data-lucide="mountain" class="w-4 h-4 text-red-500"></i>
+                        </div>
+                        <div class="text-3xl font-extrabold font-mono text-red-400 tracking-tight" id="sensor-val-fos">0.94 <span class="text-xs text-red-500 uppercase font-bold">(CRITICAL)</span></div>
+                        <div class="text-[11px] text-red-400">FoS &le; 1.0 indicates imminent slope failure</div>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-blue-400 shadow-xl space-y-1">
+                        <div class="flex items-center justify-between text-xs text-slate-400">
+                            <span>River Water Level</span>
+                            <i data-lucide="waves" class="w-4 h-4 text-blue-400"></i>
+                        </div>
+                        <div class="text-3xl font-extrabold font-mono text-blue-400 tracking-tight" id="sensor-val-river">1,983.5 m</div>
+                        <div class="text-[11px] text-red-400">+3.5m above danger mark (1,980.0m)</div>
+                    </div>
+                </div>
+
+                <!-- Dual Synchronized Telemetry Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-panel p-5 rounded-2xl shadow-xl space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold font-heading text-white flex items-center gap-2">
+                                <i data-lucide="trending-up" class="w-4 h-4 text-cyan-400"></i>
+                                Rainfall Intensity vs. Volumetric Soil Moisture Timeline
+                            </h3>
+                            <span class="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> LIVE SYNC
+                            </span>
+                        </div>
+                        <canvas id="chart-rainfall-moisture" class="w-full max-h-72"></canvas>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-2xl shadow-xl space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold font-heading text-white flex items-center gap-2">
+                                <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i>
+                                Geotechnical Factor of Safety (FoS) & River Gauge Trend
+                            </h3>
+                            <span class="text-[10px] text-red-400 font-mono">CRITICAL THRESHOLD: FoS &lt; 1.0</span>
+                        </div>
+                        <canvas id="chart-fos-river" class="w-full max-h-72"></canvas>
+                    </div>
+                </div>
+
+                <!-- Live Sensor Node Table -->
+                <div class="glass-panel p-5 rounded-2xl shadow-xl space-y-4">
+                    <h3 class="text-sm font-bold font-heading text-white flex items-center gap-2">
+                        <i data-lucide="cpu" class="w-4 h-4 text-amber-400"></i>
+                        Active IoT Field Nodes Telemetry Inventory
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-900/90 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                                <tr>
+                                    <th class="p-3">Node ID</th>
+                                    <th class="p-3">Sensor Name & Ward</th>
+                                    <th class="p-3">Sensor Type</th>
+                                    <th class="p-3">Telemetry Value</th>
+                                    <th class="p-3">Battery</th>
+                                    <th class="p-3">Signal (RSSI)</th>
+                                    <th class="p-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800" id="sensor-table-body">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: Geotechnical Slope Physics Laboratory -->
+            <section id="view-slope-physics" class="hidden space-y-6">
+                <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                        <div>
+                            <h2 class="text-lg font-bold font-heading text-white flex items-center gap-2">
+                                <i data-lucide="calculator" class="w-5 h-5 text-indigo-400"></i>
+                                Infinite Slope Geotechnical Physics Laboratory & Monte Carlo Simulator
+                            </h2>
+                            <p class="text-xs text-slate-400 mt-1">
+                                Mohr-Coulomb shear strength analysis incorporating matric suction loss, critical shear plane failure, and root cohesion.
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 block">Mohr-Coulomb Formulation:</span>
+                            <span class="text-xs font-mono text-cyan-300 bg-slate-900 px-3 py-1 rounded-lg border border-slate-800">
+                                FoS = [c' + (γ_sat - m·γ_w)·z·cos²θ·tanφ'] / [γ_sat·z·sinθ·cosθ]
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- Left Controls Column (4 cols) -->
+                        <div class="lg:col-span-5 glass-card p-5 rounded-xl space-y-4">
+                            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400"></i> Interactive Geotechnical Sliders
+                            </h3>
+
+                            <div class="space-y-3 text-xs">
+                                <div>
+                                    <div class="flex justify-between font-semibold">
+                                        <span class="text-slate-300">Slope Inclination (θ):</span>
+                                        <span id="val-slope" class="text-indigo-400 font-mono font-bold">47.5°</span>
+                                    </div>
+                                    <input type="range" id="input-slope" min="15" max="65" value="47.5" step="0.5" class="w-full accent-indigo-500 mt-1 cursor-pointer" oninput="updatePhysicsModel()">
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between font-semibold">
+                                        <span class="text-slate-300">Soil Moisture (VWC):</span>
+                                        <span id="val-vwc" class="text-cyan-400 font-mono font-bold">0.42 (93% Sat)</span>
+                                    </div>
+                                    <input type="range" id="input-vwc" min="0.10" max="0.45" value="0.42" step="0.01" class="w-full accent-cyan-500 mt-1 cursor-pointer" oninput="updatePhysicsModel()">
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between font-semibold">
+                                        <span class="text-slate-300">Effective Cohesion (c'):</span>
+                                        <span id="val-cohesion" class="text-emerald-400 font-mono font-bold">6.5 kPa</span>
+                                    </div>
+                                    <input type="range" id="input-cohesion" min="2" max="30" value="6.5" step="0.5" class="w-full accent-emerald-500 mt-1 cursor-pointer" oninput="updatePhysicsModel()">
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between font-semibold">
+                                        <span class="text-slate-300">Internal Friction Angle (φ'):</span>
+                                        <span id="val-friction" class="text-amber-400 font-mono font-bold">22.0°</span>
+                                    </div>
+                                    <input type="range" id="input-friction" min="15" max="45" value="22.0" step="0.5" class="w-full accent-amber-500 mt-1 cursor-pointer" oninput="updatePhysicsModel()">
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between font-semibold">
+                                        <span class="text-slate-300">Shear Depth (z):</span>
+                                        <span id="val-depth" class="text-purple-400 font-mono font-bold">3.1 m</span>
+                                    </div>
+                                    <input type="range" id="input-depth" min="1.0" max="6.0" value="3.1" step="0.1" class="w-full accent-purple-500 mt-1 cursor-pointer" oninput="updatePhysicsModel()">
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between font-semibold">
+                                        <span class="text-slate-300">Forest Root Cohesion (Δc):</span>
+                                        <span id="val-root" class="text-green-400 font-mono font-bold">2.0 kPa</span>
+                                    </div>
+                                    <input type="range" id="input-root" min="0.0" max="10.0" value="2.0" step="0.5" class="w-full accent-green-500 mt-1 cursor-pointer" oninput="updatePhysicsModel()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Output Column: 2D Canvas & Calculated FoS (7 cols) -->
+                        <div class="lg:col-span-7 space-y-4 flex flex-col justify-between">
+                            <!-- 2D Interactive Mountain Slope Slice Canvas -->
+                            <div class="glass-card p-4 rounded-xl space-y-2">
+                                <div class="flex items-center justify-between text-xs text-slate-300 font-semibold">
+                                    <span class="flex items-center gap-1.5"><i data-lucide="mountain-snow" class="w-3.5 h-3.5 text-indigo-400"></i> Dynamic Slope Cross-Section Slice</span>
+                                    <span class="text-slate-400 font-mono text-[10px]">BLUE = Water Table | RED = Shear Plane</span>
+                                </div>
+                                <canvas id="slopeCanvas" width="600" height="280"></canvas>
+                            </div>
+
+                            <!-- Calculated FoS & Stress Values -->
+                            <div class="grid grid-cols-3 gap-3 text-center">
+                                <div class="glass-card p-3 rounded-xl border border-slate-700">
+                                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Factor of Safety (FoS)</div>
+                                    <div class="text-2xl font-extrabold font-mono text-red-500 mt-1" id="calc-fos">0.92</div>
+                                    <div class="text-[10px] font-bold text-red-400" id="calc-status">IMMINENT FAILURE</div>
+                                </div>
+                                <div class="glass-card p-3 rounded-xl border border-slate-700">
+                                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Driving Shear Stress (τ_d)</div>
+                                    <div class="text-2xl font-extrabold font-mono text-amber-400 mt-1" id="calc-driving">32.4 kPa</div>
+                                    <div class="text-[10px] text-slate-400">Gravitational force</div>
+                                </div>
+                                <div class="glass-card p-3 rounded-xl border border-slate-700">
+                                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Resisting Strength (τ_f)</div>
+                                    <div class="text-2xl font-extrabold font-mono text-emerald-400 mt-1" id="calc-resisting">29.8 kPa</div>
+                                    <div class="text-[10px] text-slate-400">Cohesion + Friction</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: Gemini AI Command Copilot & Tactical Chat -->
+            <section id="view-gemini-ai" class="hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Left: Tactical Situation Report Generator (7 cols) -->
+                    <div class="lg:col-span-7 glass-panel p-6 rounded-2xl shadow-xl space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                            <div>
+                                <h2 class="text-base font-bold font-heading text-white flex items-center gap-2">
+                                    <i data-lucide="bot" class="w-5 h-5 text-indigo-400"></i>
+                                    Gemini AI Tactical Commander Copilot
+                                </h2>
+                                <p class="text-xs text-slate-400">Powered by Gemini 3.7 Flash with Indian Disaster SOP Knowledge</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <select id="ai-language-select" class="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs outline-none">
+                                    <option value="English">English</option>
+                                    <option value="Hindi">हिन्दी (Hindi)</option>
+                                    <option value="Garhwali">गढ़वाली (Garhwali)</option>
+                                    <option value="Punjabi">ਪੰਜਾਬੀ (Punjabi)</option>
+                                    <option value="Malayalam">മലയാളം (Malayalam)</option>
+                                    <option value="Bengali">বাংলা (Bengali)</option>
+                                </select>
+                                <button onclick="generateAIAdvisory()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg shadow-md flex items-center gap-1.5 transition">
+                                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Synthesize Report
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Situation Summary Card -->
+                        <div class="glass-card p-4 rounded-xl space-y-2">
+                            <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Executive Situation Summary</h3>
+                            <p class="text-xs text-slate-300 leading-relaxed font-sans" id="ai-summary">
+                                Click 'Synthesize Report' to run Gemini AI hydro-geotechnical situational assessment.
+                            </p>
+                        </div>
+
+                        <!-- Tactical Instructions & Resources -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="glass-card p-4 rounded-xl space-y-2">
+                                <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                                    <i data-lucide="check-square" class="w-3.5 h-3.5"></i> NDRF Tactical Directives
+                                </h3>
+                                <ul class="text-xs text-slate-300 space-y-2 list-disc list-inside" id="ai-instructions">
+                                    <li>Awaiting AI tactical generation...</li>
+                                </ul>
+                            </div>
+
+                            <div class="glass-card p-4 rounded-xl space-y-2">
+                                <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                                    <i data-lucide="truck" class="w-3.5 h-3.5"></i> Resource Allocation Plan
+                                </h3>
+                                <ul class="text-xs text-slate-300 space-y-2 list-disc list-inside" id="ai-resources">
+                                    <li>Awaiting resource allocation plan...</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Public Broadcast Voice Announcement Card -->
+                        <div class="glass-card p-4 rounded-xl space-y-2 border border-red-900/60 bg-red-950/20">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i data-lucide="megaphone" class="w-3.5 h-3.5"></i> Public Warning Evacuation Broadcast
+                                </h3>
+                                <button onclick="speakAIBroadcast()" class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[11px] font-semibold flex items-center gap-1">
+                                    <i data-lucide="volume-2" class="w-3 h-3"></i> Vocalize (PA Siren)
+                                </button>
+                            </div>
+                            <div class="text-xs text-slate-200 italic p-3 bg-slate-900/90 rounded-lg border border-slate-800" id="ai-broadcast">
+                                Waiting for Gemini AI synthesis...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Interactive Tactical AI Copilot Chat (5 cols) -->
+                    <div class="lg:col-span-5 glass-panel p-6 rounded-2xl shadow-xl flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                                <h3 class="text-sm font-bold font-heading text-white flex items-center gap-2">
+                                    <i data-lucide="message-square" class="w-4 h-4 text-indigo-400"></i>
+                                    Tactical Command Q&A Assistant
+                                </h3>
+                                <span class="text-[10px] bg-indigo-950 text-indigo-400 px-2 py-0.5 rounded font-mono">ONLINE</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-1">Ask questions regarding ridge evacuation routes, river flood markers, or rescue boat deployment.</p>
+                        </div>
+
+                        <!-- Chat Messages Window -->
+                        <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 h-64 overflow-y-auto space-y-2.5 text-xs" id="chat-messages">
+                            <div class="bg-indigo-950/60 border border-indigo-800/60 p-2.5 rounded-lg text-slate-200">
+                                <strong>Gemini Copilot:</strong> Ready for disaster command queries. How can I assist NDRF operations today?
+                            </div>
+                        </div>
+
+                        <!-- Chat Quick Prompts -->
+                        <div class="flex flex-wrap gap-1.5 text-[10px]">
+                            <button onclick="sendQuickChat('What is the primary evacuation route for Raini Ward?')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700">Evacuation Route?</button>
+                            <button onclick="sendQuickChat('How many rescue boats needed if river crosses 1985m?')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700">Rescue Boats Needed?</button>
+                            <button onclick="sendQuickChat('Explain why Factor of Safety dropped below 1.0.')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700">Why FoS &lt; 1.0?</button>
+                        </div>
+
+                        <!-- Chat Input Box -->
+                        <form onsubmit="handleChatSubmit(event)" class="flex space-x-2">
+                            <input type="text" id="chat-input" placeholder="Type tactical question..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-center">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: Disaster Drill Simulator -->
+            <section id="view-simulator" class="hidden space-y-6">
+                <div class="glass-panel p-6 rounded-2xl border border-amber-800/80 shadow-2xl space-y-6">
+                    <div>
+                        <h2 class="text-base font-bold font-heading text-amber-400 flex items-center gap-2">
+                            <i data-lucide="flame" class="w-5 h-5"></i>
+                            Real-Time Meteorological & Geotechnical Scenario Injector
+                        </h2>
+                        <p class="text-xs text-slate-300 mt-1">
+                            Inject extreme simulated weather anomalies into the live telemetry stream to test emergency lead-time countdowns, SMS broadcasts, and NDRF readiness.
+                        </p>
+                    </div>
+
+                    <!-- Preset Scenario Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <button onclick="triggerScenario('CLOUDBURST')" class="bg-red-950/70 hover:bg-red-900 border border-red-600 p-4 rounded-xl text-left space-y-2 transition group">
+                            <div class="font-bold text-red-400 text-sm flex items-center gap-2 group-hover:translate-x-0.5 transition">
+                                <i data-lucide="cloud-lightning" class="w-4 h-4"></i> Cloudburst (125 mm/h)
+                            </div>
+                            <div class="text-[11px] text-slate-300">Triggers instantaneous high-intensity rainfall spike, slope saturation, and rapid debris runoff.</div>
+                        </button>
+
+                        <button onclick="triggerScenario('GLOF')" class="bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-600 p-4 rounded-xl text-left space-y-2 transition group">
+                            <div class="font-bold text-indigo-400 text-sm flex items-center gap-2 group-hover:translate-x-0.5 transition">
+                                <i data-lucide="mountain" class="w-4 h-4"></i> GLOF Surge
+                            </div>
+                            <div class="text-[11px] text-slate-300">Glacial Lake Outburst Flood causing catastrophic +12m surge in downstream river gorge.</div>
+                        </button>
+
+                        <button onclick="triggerScenario('SATURATION_SPIKE')" class="bg-amber-950/70 hover:bg-amber-900 border border-amber-600 p-4 rounded-xl text-left space-y-2 transition group">
+                            <div class="font-bold text-amber-400 text-sm flex items-center gap-2 group-hover:translate-x-0.5 transition">
+                                <i data-lucide="droplets" class="w-4 h-4"></i> Soil Saturation
+                            </div>
+                            <div class="text-[11px] text-slate-300">Pore-water pressure escalation destroying matric suction; drops FoS below 1.0.</div>
+                        </button>
+
+                        <button onclick="triggerScenario('FLASH_SURGE')" class="bg-blue-950/70 hover:bg-blue-900 border border-blue-600 p-4 rounded-xl text-left space-y-2 transition group">
+                            <div class="font-bold text-blue-400 text-sm flex items-center gap-2 group-hover:translate-x-0.5 transition">
+                                <i data-lucide="waves" class="w-4 h-4"></i> River Flash Flood
+                            </div>
+                            <div class="text-[11px] text-slate-300">Rapid 8.2m river rise breaching CWC danger levels with debris damming.</div>
+                        </button>
+
+                        <button onclick="triggerScenario('NORMAL')" class="bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-600 p-4 rounded-xl text-left space-y-2 transition group">
+                            <div class="font-bold text-emerald-400 text-sm flex items-center gap-2 group-hover:translate-x-0.5 transition">
+                                <i data-lucide="check-circle" class="w-4 h-4"></i> Reset Baseline
+                            </div>
+                            <div class="text-[11px] text-slate-300">Restores standard monsoonal monitoring and stable physical slope conditions.</div>
+                        </button>
+                    </div>
+
+                    <!-- Custom Simulation Slider Bar -->
+                    <div class="glass-card p-4 rounded-xl space-y-3">
+                        <div class="flex items-center justify-between text-xs font-semibold">
+                            <span class="text-slate-200">Custom Cloudburst Rainfall Injection: <strong id="custom-rain-val" class="text-cyan-400 font-mono">110 mm/h</strong></span>
+                            <button onclick="injectCustomRain()" class="px-3 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold transition">Inject Custom Rain Rate</button>
+                        </div>
+                        <input type="range" id="custom-rain-slider" min="10" max="180" value="110" step="5" class="w-full accent-cyan-400 cursor-pointer" oninput="document.getElementById('custom-rain-val').innerText = this.value + ' mm/h'">
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: Actionable Lead-Time & Dispatch Hub -->
+            <section id="view-early-warnings" class="hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Actionable Alert Panel (2 cols) -->
+                    <div class="lg:col-span-2 glass-panel p-6 rounded-2xl shadow-xl space-y-5">
+                        <h2 class="text-base font-bold font-heading text-white flex items-center gap-2">
+                            <i data-lucide="radio" class="w-5 h-5 text-red-500"></i>
+                            Actionable Evacuation Lead-Time & Emergency Broadcast Center
+                        </h2>
+
+                        <!-- Big Digital Countdown Clock -->
+                        <div class="bg-gradient-to-r from-red-950/80 via-slate-900 to-red-950/80 border border-red-600/80 p-5 rounded-2xl flex flex-wrap items-center justify-between gap-4 glow-red">
+                            <div class="space-y-1">
+                                <span class="text-[11px] font-extrabold text-red-400 uppercase tracking-widest flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+                                    ACTIONABLE EVACUATION LEAD TIME
+                                </span>
+                                <div class="text-5xl font-black font-mono text-red-500 tracking-tight" id="lead-time-display">00:35:00</div>
+                                <p class="text-xs text-slate-300">Remaining window before slope rupture / flood crest in <strong id="lead-ward-name" class="text-white">Raini Village (Ward 4)</strong>.</p>
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <button onclick="dispatchAlertSMS()" class="bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold px-5 py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 text-xs transition">
+                                    <i data-lucide="send" class="w-4 h-4"></i> Dispatch Emergency SMS & Siren
+                                </button>
+                                <button onclick="downloadIAPReport()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold px-5 py-2 rounded-xl text-xs flex items-center justify-center gap-2 transition">
+                                    <i data-lucide="printer" class="w-4 h-4 text-cyan-400"></i> Print Incident Action Plan (IAP)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Evacuation Routes & High Ground Shelters -->
+                        <div class="space-y-3 pt-2">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Designated Evacuation Routes & High-Ground Relief Camps</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                <div class="glass-card p-4 rounded-xl space-y-1 border border-emerald-800/50">
+                                    <div class="font-semibold text-emerald-400 flex items-center gap-1.5">
+                                        <i data-lucide="navigation" class="w-4 h-4"></i> Primary Safe Evacuation Trail
+                                    </div>
+                                    <div class="text-slate-200 mt-1 font-medium" id="route-primary">Nanda Devi High Trail -> Lata Ridge Connection</div>
+                                    <div class="text-[11px] text-slate-400">Maintained above peak debris flow runoff plane.</div>
+                                </div>
+                                <div class="glass-card p-4 rounded-xl space-y-1 border border-blue-800/50">
+                                    <div class="font-semibold text-blue-400 flex items-center gap-1.5">
+                                        <i data-lucide="home" class="w-4 h-4"></i> Designated High Relief Camp
+                                    </div>
+                                    <div class="text-slate-200 mt-1 font-medium" id="shelter-primary">Upper Raini Primary School Relief Camp</div>
+                                    <div class="text-[11px] text-slate-400">Capacity: 800 persons | Satellite comms equipped.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dispatch Terminal Simulator (1 col) -->
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-4 flex flex-col justify-between">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <h3 class="text-sm font-bold font-heading text-slate-200">Broadcast Dispatch Log</h3>
+                            <span class="text-[10px] text-emerald-400 font-mono">GATEWAY ACTIVE</span>
+                        </div>
+                        <div class="bg-slate-950 font-mono text-xs p-3.5 rounded-xl border border-slate-800 h-80 overflow-y-auto space-y-2 text-emerald-400" id="sms-log">
+                            <div>[SYSTEM READY] Telemetry server connected.</div>
+                            <div>[DISPATCH READY] SMS Gateway registered for NDRF Battalion 14.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: SOS Distress Radar & Citizen Rescue Log -->
+            <section id="view-sos-radar" class="hidden space-y-6">
+                <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div>
+                            <h2 class="text-base font-bold font-heading text-red-400 flex items-center gap-2">
+                                <i data-lucide="life-buoy" class="w-5 h-5"></i>
+                                Citizen SOS Emergency Distress Queue
+                            </h2>
+                            <p class="text-xs text-slate-400">Live feed of distress beacons transmitted from citizens via mobile GPS</p>
+                        </div>
+                        <button onclick="fetchSOSAlerts()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh SOS Feed
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-900/90 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                                <tr>
+                                    <th class="p-3">SOS ID</th>
+                                    <th class="p-3">Citizen Name & Contact</th>
+                                    <th class="p-3">Location / Ward</th>
+                                    <th class="p-3">Persons Trapped</th>
+                                    <th class="p-3">Emergency Situation</th>
+                                    <th class="p-3">Time</th>
+                                    <th class="p-3">Status / Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800" id="sos-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 8: Historical Disaster Inventory -->
+            <section id="view-historical" class="hidden space-y-6">
+                <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                        <div>
+                            <h2 class="text-base font-bold font-heading text-white flex items-center gap-2">
+                                <i data-lucide="book-open" class="w-5 h-5 text-amber-400"></i>
+                                Historical Landslide, Flash Flood & Cloudburst Disaster Inventory
+                            </h2>
+                            <p class="text-xs text-slate-400">Validated post-disaster geotechnical records across Indian Himalayan and Western Ghats states</p>
+                        </div>
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400"></i>
+                            <input type="text" id="hist-search-input" onkeyup="filterHistoricalTable()" placeholder="Search disaster, state..." class="bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-900/90 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                                <tr>
+                                    <th class="p-3">Event ID</th>
+                                    <th class="p-3">Location & District</th>
+                                    <th class="p-3">Event Type</th>
+                                    <th class="p-3">Date</th>
+                                    <th class="p-3">Trigger Rainfall</th>
+                                    <th class="p-3">Casualties</th>
+                                    <th class="p-3">Severity</th>
+                                    <th class="p-3">Geotechnical Summary</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800" id="historical-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- APP MODE 2: CITIZEN MOBILE SAFETY & EVACUATION PORTAL -->
+    <div id="app-mode-citizen" class="hidden flex-1 p-4 lg:p-8 space-y-6 max-w-5xl mx-auto w-full">
+
+        <!-- Citizen Welcome & Ward Selection Card -->
+        <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-4 border-l-4 border-l-red-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold font-heading text-white flex items-center gap-2">
+                        <i data-lucide="map-pin" class="w-6 h-6 text-red-400"></i>
+                        Check My Village / Ward Safety Status
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Real-time geotechnical flood & landslide alert for residents in hilly regions</p>
+                </div>
+                <button onclick="detectCitizenLocation()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+                    <i data-lucide="crosshair" class="w-4 h-4 text-cyan-400"></i> Auto-Detect My Location
+                </button>
+            </div>
+
+            <!-- Ward Picker Dropdown -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs text-slate-300 font-semibold block mb-1">Select Your Ward / Village Area:</label>
+                    <select id="citizen-ward-select" onchange="updateCitizenWardView(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-xl p-2.5 text-xs outline-none focus:border-red-500">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Citizen Hazard Summary Status -->
+                <div class="glass-card p-3.5 rounded-xl flex items-center justify-between" id="citizen-risk-card">
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase font-semibold">Current Hazard Level</div>
+                        <div class="text-lg font-black text-red-400 font-heading" id="citizen-risk-badge">RED ALERT (CRITICAL)</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[10px] text-slate-400 uppercase font-semibold">Remaining Evacuation Window</div>
+                        <div class="text-lg font-black text-amber-400 font-mono" id="citizen-lead-time">35 MINS</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1-Tap SOS Emergency Distress Beacon -->
+        <div class="bg-gradient-to-br from-red-950/90 via-slate-900 to-red-950/90 border-2 border-red-600 p-6 rounded-2xl shadow-2xl space-y-4 glow-red">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold font-heading text-white flex items-center gap-2">
+                        <i data-lucide="life-buoy" class="w-5 h-5 text-red-400"></i>
+                        1-Tap SOS Emergency Distress Beacon
+                    </h3>
+                    <p class="text-xs text-red-200 mt-0.5">Send instant emergency rescue request with GPS coordinates directly to NDRF Command Center</p>
+                </div>
+                <span class="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse">PRIORITY 1</span>
+            </div>
+
+            <form onsubmit="handleCitizenSOSSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <input type="text" id="sos-name" required placeholder="Your Name" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-red-500">
+                <input type="tel" id="sos-phone" required placeholder="Phone (+91-XXXXX-XXXXX)" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-red-500">
+                <input type="number" id="sos-people" min="1" max="50" value="2" placeholder="Trapped Persons" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-red-500">
+                <input type="text" id="sos-desc" required placeholder="Situation (e.g. mudslide near cowshed)" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-red-500">
+                <div class="md:col-span-2 lg:col-span-4 flex items-center justify-between pt-1">
+                    <label class="flex items-center space-x-2 text-red-300 text-xs cursor-pointer">
+                        <input type="checkbox" id="sos-medical" class="accent-red-500 rounded">
+                        <span>Requires Immediate Medical / Triage Assistance</span>
+                    </label>
+                    <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition text-xs">
+                        <i data-lucide="send" class="w-4 h-4"></i> Transmit SOS to NDRF
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Evacuation Route & High Ground Shelter Navigation -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="glass-panel p-5 rounded-2xl shadow-xl space-y-3">
+                <h3 class="text-sm font-bold font-heading text-white flex items-center gap-2">
+                    <i data-lucide="navigation" class="w-4 h-4 text-emerald-400"></i>
+                    Safe Ridge Evacuation Trail
+                </h3>
+                <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800 space-y-1.5 text-xs">
+                    <div class="text-slate-400">Recommended Route:</div>
+                    <div class="text-emerald-400 font-bold font-sans text-sm" id="citizen-route-name">Nanda Devi High Trail -> Lata Village Connection Ridge</div>
+                    <div class="text-[11px] text-slate-400 mt-2 flex items-center gap-2">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> Elevation gain: +180m (Safely above river surge plane)
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-5 rounded-2xl shadow-xl space-y-3">
+                <h3 class="text-sm font-bold font-heading text-white flex items-center gap-2">
+                    <i data-lucide="home" class="w-4 h-4 text-blue-400"></i>
+                    Nearest High-Ground Shelter
+                </h3>
+                <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800 space-y-1.5 text-xs">
+                    <div class="text-slate-400">Designated Relief Center:</div>
+                    <div class="text-blue-400 font-bold font-sans text-sm" id="citizen-shelter-name">Upper Raini Primary School Relief Camp</div>
+                    <div class="text-[11px] text-slate-400 mt-2 flex items-center gap-2">
+                        <i data-lucide="coffee" class="w-4 h-4 text-amber-400"></i> Drinking water, power generators, medical first aid available.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emergency Helplines Speed Dial & Family Survival Checklist -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Speed Dial -->
+            <div class="glass-panel p-5 rounded-2xl shadow-xl space-y-3">
+                <h3 class="text-sm font-bold font-heading text-white flex items-center gap-2">
+                    <i data-lucide="phone-call" class="w-4 h-4 text-amber-400"></i>
+                    Emergency Speed-Dial Directory
+                </h3>
+                <div class="grid grid-cols-2 gap-2.5 text-xs">
+                    <a href="tel:1078" class="glass-card p-3 rounded-xl border border-slate-700 hover:border-red-500 transition flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-white">NDRF Control Room</div>
+                            <div class="text-[10px] text-slate-400">Toll-free 24/7</div>
+                        </div>
+                        <span class="font-mono font-bold text-red-400">1078</span>
+                    </a>
+                    <a href="tel:1070" class="glass-card p-3 rounded-xl border border-slate-700 hover:border-amber-500 transition flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-white">State Disaster (SDMA)</div>
+                            <div class="text-[10px] text-slate-400">Emergency Helpline</div>
+                        </div>
+                        <span class="font-mono font-bold text-amber-400">1070</span>
+                    </a>
+                    <a href="tel:112" class="glass-card p-3 rounded-xl border border-slate-700 hover:border-blue-500 transition flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-white">National Emergency</div>
+                            <div class="text-[10px] text-slate-400">Police / Fire / Rescue</div>
+                        </div>
+                        <span class="font-mono font-bold text-blue-400">112</span>
+                    </a>
+                    <a href="tel:108" class="glass-card p-3 rounded-xl border border-slate-700 hover:border-emerald-500 transition flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-white">Ambulance Service</div>
+                            <div class="text-[10px] text-slate-400">Medical Triage</div>
+                        </div>
+                        <span class="font-mono font-bold text-emerald-400">108</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Family Survival Checklist -->
+            <div class="glass-panel p-5 rounded-2xl shadow-xl space-y-3">
+                <h3 class="text-sm font-bold font-heading text-white flex items-center gap-2">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+                    Family Emergency "Go-Bag" Survival Checklist
+                </h3>
+                <div class="space-y-2 text-xs text-slate-300">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" checked class="accent-emerald-500 rounded">
+                        <span>Waterproof torch / flashlight & spare batteries</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" checked class="accent-emerald-500 rounded">
+                        <span>3-day emergency drinking water & non-perishable dry rations</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" class="accent-emerald-500 rounded">
+                        <span>Essential prescription medications & first aid gauze</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" class="accent-emerald-500 rounded">
+                        <span>Aadhaar card, property papers in sealed waterproof pouch</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Application Footer -->
+    <footer class="glass-panel border-t border-slate-800/80 px-4 lg:px-8 py-3.5 flex flex-wrap items-center justify-between text-xs text-slate-400 mt-auto">
+        <div class="flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>NDRF Flash Flood & Landslide Prediction Platform • Govt. of India</span>
+        </div>
+        <div class="flex items-center space-x-4 text-slate-400 font-mono text-[11px]">
+            <span>Physics Engine: Infinite Slope FoS (Mohr-Coulomb)</span>
+            <span>•</span>
+            <span>AI: Gemini 3.7 Flash</span>
+        </div>
+    </footer>
+
+    <!-- Frontend Scripting Logic -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

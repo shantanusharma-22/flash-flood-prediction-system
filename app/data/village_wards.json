@@ -1,0 +1,163 @@
+[
+  {
+    "ward_id": "W-HP-MND-01",
+    "ward_name": "Pandoh Dam Catchment (Ward 1)",
+    "district": "Mandi",
+    "state": "Himachal Pradesh",
+    "population": 3420,
+    "elevation_m": 890.0,
+    "avg_slope_deg": 38.5,
+    "cohesion_kpa": 12.5,
+    "friction_angle_deg": 28.0,
+    "soil_depth_m": 2.2,
+    "river_danger_level_m": 894.5,
+    "historical_disasters_count": 5,
+    "evacuation_routes": ["NH-21 Bypass North Track", "Rampur High Ridge Path"],
+    "shelter_locations": ["Government High School Pandoh", "Higher Helipad Relief Grounds"],
+    "polygon": [
+      [31.6720, 77.0120],
+      [31.6780, 77.0180],
+      [31.6740, 77.0260],
+      [31.6660, 77.0220],
+      [31.6720, 77.0120]
+    ]
+  },
+  {
+    "ward_id": "W-HP-MND-02",
+    "ward_name": "Aut Tunnel Slope (Ward 2)",
+    "district": "Mandi",
+    "state": "Himachal Pradesh",
+    "population": 2180,
+    "elevation_m": 1050.0,
+    "avg_slope_deg": 44.0,
+    "cohesion_kpa": 9.0,
+    "friction_angle_deg": 25.0,
+    "soil_depth_m": 1.8,
+    "river_danger_level_m": 1010.0,
+    "historical_disasters_count": 8,
+    "evacuation_routes": ["Aut Bypass South Link", "Tunnel Top Safety Trail"],
+    "shelter_locations": ["Aut Community Health Center", "PWD Guest House Complex"],
+    "polygon": [
+      [31.7310, 77.1210],
+      [31.7380, 77.1290],
+      [31.7330, 77.1380],
+      [31.7250, 77.1310],
+      [31.7310, 77.1210]
+    ]
+  },
+  {
+    "ward_id": "W-UK-CHM-03",
+    "ward_name": "Joshimath Upper Ridge (Ward 3)",
+    "district": "Chamoli",
+    "state": "Uttarakhand",
+    "population": 4150,
+    "elevation_m": 1890.0,
+    "avg_slope_deg": 42.0,
+    "cohesion_kpa": 8.5,
+    "friction_angle_deg": 24.5,
+    "soil_depth_m": 2.8,
+    "river_danger_level_m": 1420.0,
+    "historical_disasters_count": 12,
+    "evacuation_routes": ["Auli Ropeway Station Road", "Parsari Upper Evacuation Track"],
+    "shelter_locations": ["Joshimath Army Cantonment Ground", "Auli Eco Resort Relief Camp"],
+    "polygon": [
+      [30.5510, 79.5620],
+      [30.5590, 79.5710],
+      [30.5530, 79.5820],
+      [30.5440, 79.5730],
+      [30.5510, 79.5620]
+    ]
+  },
+  {
+    "ward_id": "W-UK-CHM-04",
+    "ward_name": "Raini Village - Rishi Ganga Basin (Ward 4)",
+    "district": "Chamoli",
+    "state": "Uttarakhand",
+    "population": 1240,
+    "elevation_m": 2100.0,
+    "avg_slope_deg": 47.5,
+    "cohesion_kpa": 6.5,
+    "friction_angle_deg": 22.0,
+    "soil_depth_m": 3.1,
+    "river_danger_level_m": 1980.0,
+    "historical_disasters_count": 14,
+    "evacuation_routes": ["Nanda Devi High Trail", "Lata Village Connection Ridge"],
+    "shelter_locations": ["Upper Raini Primary School Shelter", "Lata Panchayat Relief Center"],
+    "polygon": [
+      [30.4810, 79.6910],
+      [30.4900, 79.7020],
+      [30.4840, 79.7150],
+      [30.4730, 79.7030],
+      [30.4810, 79.6910]
+    ]
+  },
+  {
+    "ward_id": "W-KL-WYN-05",
+    "ward_name": "Meppadi Chooralmala Hill (Ward 5)",
+    "district": "Wayanad",
+    "state": "Kerala",
+    "population": 3890,
+    "elevation_m": 1200.0,
+    "avg_slope_deg": 36.0,
+    "cohesion_kpa": 11.0,
+    "friction_angle_deg": 27.5,
+    "soil_depth_m": 2.5,
+    "river_danger_level_m": 940.0,
+    "historical_disasters_count": 9,
+    "evacuation_routes": ["Vellarimala Ridge Road", "Meppadi Town Main Route"],
+    "shelter_locations": ["St. Joseph School Camp", "Meppadi Community Center"],
+    "polygon": [
+      [11.5310, 76.1210],
+      [11.5400, 76.1320],
+      [11.5340, 76.1430],
+      [11.5230, 76.1320],
+      [11.5310, 76.1210]
+    ]
+  },
+  {
+    "ward_id": "W-UK-RDR-06",
+    "ward_name": "Kedarnath Mandakini Basin (Ward 6)",
+    "district": "Rudraprayag",
+    "state": "Uttarakhand",
+    "population": 1850,
+    "elevation_m": 3584.0,
+    "avg_slope_deg": 46.0,
+    "cohesion_kpa": 7.0,
+    "friction_angle_deg": 23.0,
+    "soil_depth_m": 2.9,
+    "river_danger_level_m": 3580.0,
+    "historical_disasters_count": 16,
+    "evacuation_routes": ["Bhairavnath High Ridge Trail", "Garud Chatti Elevated Track"],
+    "shelter_locations": ["GMVN Safe High Colony", "Bhairav Temple Ridge Post"],
+    "polygon": [
+      [30.7310, 79.0620],
+      [30.7410, 79.0710],
+      [30.7360, 79.0810],
+      [30.7250, 79.0720],
+      [30.7310, 79.0620]
+    ]
+  },
+  {
+    "ward_id": "W-HP-KNG-07",
+    "ward_name": "McLeod Ganj - Bhagsu Falls (Ward 7)",
+    "district": "Kangra",
+    "state": "Himachal Pradesh",
+    "population": 4600,
+    "elevation_m": 2082.0,
+    "avg_slope_deg": 39.0,
+    "cohesion_kpa": 10.5,
+    "friction_angle_deg": 26.5,
+    "soil_depth_m": 2.1,
+    "river_danger_level_m": 2075.0,
+    "historical_disasters_count": 6,
+    "evacuation_routes": ["Triund High Trail Connection", "Dharamkot Ridge Link"],
+    "shelter_locations": ["Dharamkot Govt Secondary School", "McLeodganj Community Hall"],
+    "polygon": [
+      [32.2380, 76.3210],
+      [32.2480, 76.3310],
+      [32.2420, 76.3420],
+      [32.2310, 76.3320],
+      [32.2380, 76.3210]
+    ]
+  }
+]
